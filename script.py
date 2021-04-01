@@ -1,5 +1,5 @@
 import click
-from classes import Validations, AvgPrice
+from classes import Validations, AvgPrice, ConsecutiveIncrease
 
 @click.group()
 def main():
@@ -23,7 +23,8 @@ def average(start_date, end_date, coin):
 def increase(start_date, end_date, coin):
     Validations.date_validation('increase', start_date, end_date)
     Validations.coin_validation(coin)
-    click.echo(f"TO jest opcja INC dla dat {start_date.strftime('%Y-%m-%d')} i {end_date.strftime('%Y-%m-%d')}")
+    longest_inc = ConsecutiveIncrease(str(start_date)[:10], str(end_date)[:10], coin)
+    longest_inc.longest_increase()
 
 @main.command()
 @click.option('--start-date', required=True, type=click.DateTime(formats=["%Y-%m-%d"]))

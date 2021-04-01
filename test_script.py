@@ -6,13 +6,11 @@ def test_avarage():
     runner = CliRunner()
     result = runner.invoke(main, ['average','--start-date=2020-01','--end-date=2020-05'])
     assert result.exit_code == 0
-    # assert result.output == "DATA Z API\n"
 
 def test_increase():
     runner = CliRunner()
     result = runner.invoke(main, ['increase','--start-date=2020-04-01','--end-date=2020-05-02'])
     assert result.exit_code == 0
-    assert result.output == "TO jest opcja INC dla dat 2020-04-01 i 2020-05-02\n"
 
 def test_export_to_csv():
     runner = CliRunner()

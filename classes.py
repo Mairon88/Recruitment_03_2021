@@ -100,7 +100,6 @@ class AvgPrice():
         data = self.prepare_data()
 
         df = pd.DataFrame.from_dict(data, orient='index', columns=['time_close','close'])
-        print(df)
         df['time_close'] = df['time_close'].apply(shorten_data)
         groups = df.groupby(by='time_close')
         month_list = list(groups.size().index)
@@ -110,7 +109,78 @@ class AvgPrice():
             price_list.append(round(float(df.where(avg_for_this_month).dropna(how='all').mean()),2))
         new_df = pd.DataFrame({'Date': month_list,'Average price ($)': price_list})
         click.echo(click.style((new_df.to_string(index=False)), fg='green'))
-        click.echo(click.style((""), fg='yellow'))
+        today = datetime.date.today()
+        days_in_month = monthrange(int(self.end_point[:4]), int(self.end_point[5:8]))[1]
+        if str(self.end_point)+f"-{days_in_month}" > str(today)[:10]:
+            click.echo(click.style(("W związku z tym, że aktualny miesiąc jeszcze się nie skończył to wartość średnia ostatniego miesiąca liczona jest od początku miesiąca do aktualnego dnia i godziny"), fg='yellow'))
+
+
+class ConsecutiveIncrease():
+    def __init__(self, start_point, end_point, coin):
+        self.start_point = start_point
+        self.end_point = end_point
+        self.coin= coin
+
+    def get_data_to_calculate(self):
+        get_data = GetHistoricalOHLC(self.start_point, self.end_point, self.coin, 'inc')
+        get_data.check_params()
+
+    def prepare_data(self):
+        self.get_data_to_calculate()
+
+        with open(f'caching_mechanism_inc', 'rb') as file:
+            data = pickle.load(file)
+
+        data_dict = {}
+        n = 1
+        for i in data:
+            data_dict.setdefault(n, i)
+            n += 1
+        return data_dict
+
+    def longest_increase(self):
+        def shorten_data(data):
+            short_data = data[:10]
+            return short_data
+
+        data = self.prepare_data()
+        pairs_date_price = []
+        temporary_data = []
+
+        df = pd.DataFrame.from_dict(data, orient='index', columns=['time_close','close'])
+        df['time_close'] = df['time_close'].apply(shorten_data)
+        # print(df)
+
+        for index, row in df.iterrows():
+            # print(row[0], row[1])
+            if temporary_data != []:
+                if row[1] > temporary_data[-1][1]:  #Dodaje wartość do temporary bo wartość jest wieksza niz ostatnia z listy"
+                    temporary_data.append((row[0], row[1]))
+                else:
+                    if len(pairs_date_price) < len(temporary_data):
+                        pairs_date_price = temporary_data.copy()
+                        # print("Zaminiłem listy")
+                        temporary_data.clear()
+                        # print("Wyczyściłem temporary data")
+                        temporary_data.append((row[0], row[1]))
+                        # print("Dodałem nową wartość do pustej listy")
+                    else:
+                        # print("Nie zamieniam listy")
+                        # print("Wyczyściłem temporary data")
+                        # print("Dodałem nową wartość do pustej listy")
+                        temporary_data.clear()
+                        temporary_data.append((row[0], row[1]))
+
+            else:
+                temporary_data.append((row[0],row[1]))
+            #     print("Dodałem nową wartość bo lista była pusta")
+            # print(temporary_data)
+            # print(pairs_date_price)
+
+        # print(pairs_date_price)
+        click.echo(click.style((f"Longest consecutive period was from {pairs_date_price[0][0]} to {pairs_date_price[-1][0]} with increase of ${round(pairs_date_price[-1][1]-pairs_date_price[0][1],2)}"), fg='green'))
+
+
 
 
 class GetHistoricalOHLC():
@@ -177,20 +247,11 @@ class GetHistoricalOHLC():
         else:
             self.save_params()
             self.get_data_from_api()
-    #
-    #
+
     # KONWERTOWANIE DANYCH DO CSV I ZAPIS DO PLIKU W CELU  LEPSZEJ OBROBKI W PANDASIE
     def caching_mechanism(self,data):
         try:
             with open(f'caching_mechanism_{self.option}', 'wb') as file:
-                # file.write((",").join(['"Date"','"Prize"']))
                 pickle.dump(data, file)
-                # for i in data:
-                #     if self.option == 'avg':
-                #         file.write((",").join([i['time_close'][:7],str(round(i['close'],2))]))
-                #         file.write("\n")
-                #     elif self.option == 'inc':
-                #         file.write((",").join([i['time_close'][:10],str(round(i['close'],2))]))
-                #         file.write("\n")
         except:
             print("Coś nie tak z konwertowaniem")
