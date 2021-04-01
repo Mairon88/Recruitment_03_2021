@@ -152,35 +152,63 @@ class ConsecutiveIncrease():
         # print(df)
 
         for index, row in df.iterrows():
-            # print(row[0], row[1])
             if temporary_data != []:
-                if row[1] > temporary_data[-1][1]:  #Dodaje wartość do temporary bo wartość jest wieksza niz ostatnia z listy"
+                if row[1] > temporary_data[-1][1]:
                     temporary_data.append((row[0], row[1]))
                 else:
                     if len(pairs_date_price) < len(temporary_data):
                         pairs_date_price = temporary_data.copy()
-                        # print("Zaminiłem listy")
                         temporary_data.clear()
-                        # print("Wyczyściłem temporary data")
                         temporary_data.append((row[0], row[1]))
-                        # print("Dodałem nową wartość do pustej listy")
+
                     else:
-                        # print("Nie zamieniam listy")
-                        # print("Wyczyściłem temporary data")
-                        # print("Dodałem nową wartość do pustej listy")
                         temporary_data.clear()
                         temporary_data.append((row[0], row[1]))
 
             else:
                 temporary_data.append((row[0],row[1]))
-            #     print("Dodałem nową wartość bo lista była pusta")
-            # print(temporary_data)
-            # print(pairs_date_price)
 
-        # print(pairs_date_price)
         click.echo(click.style((f"Longest consecutive period was from {pairs_date_price[0][0]} to {pairs_date_price[-1][0]} with increase of ${round(pairs_date_price[-1][1]-pairs_date_price[0][1],2)}"), fg='green'))
 
+class ExportToCSVorJSON():
+    def __init__(self, start_point, end_point, format, file, coin):
+        self.start_point = start_point
+        self.end_point = end_point
+        self.format = format
+        self.file = file
+        self.coin = coin
 
+    def get_data_to_calculate(self):
+        get_data = GetHistoricalOHLC(self.start_point, self.end_point, self.coin, 'exp')
+        get_data.check_params()
+
+    def prepare_data(self):
+        self.get_data_to_calculate()
+
+        with open(f'caching_mechanism_exp', 'rb') as file:
+            data = pickle.load(file)
+
+        data_dict = {}
+        n = 1
+        for i in data:
+            data_dict.setdefault(n, i)
+            n += 1
+        return data_dict
+
+    def export_to_file(self):
+        def shorten_data(data):
+            short_data = data[:10]
+            return short_data
+        data = self.prepare_data()
+        df = pd.DataFrame.from_dict(data, orient='index', columns=['time_close', 'close'])
+        df['time_close'] = df['time_close'].apply(shorten_data)
+        df['close'] = df['close'].round(2)
+        df = df.rename(columns={'time_close':'Date', 'close':'Price'})
+        if self.format == 'json':
+            df.to_json(self.file, orient='records')
+        elif self.format == 'csv':
+            df.to_csv(self.file, sep=',', index=False)
+        click.echo(click.style((f'Zapisano dane do pliku: {self.file}'), fg='green'))
 
 
 class GetHistoricalOHLC():

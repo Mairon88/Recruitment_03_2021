@@ -16,7 +16,6 @@ def test_export_to_csv():
     runner = CliRunner()
     result = runner.invoke(main, ['export','--start-date=2020-01-01','--end-date=2020-05-01', '--format=csv', '--file=myfile.csv'])
     assert result.exit_code == 0
-    assert result.output == "TO jest opcja INC dla dat 2020-01-01 i 2020-05-01 oraz formatu csv i pliku myfile.csv\n"
 
 def test_export_to_json():
     runner = CliRunner()

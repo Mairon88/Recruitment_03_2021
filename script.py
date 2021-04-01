@@ -1,5 +1,5 @@
 import click
-from classes import Validations, AvgPrice, ConsecutiveIncrease
+from classes import Validations, AvgPrice, ConsecutiveIncrease, ExportToCSVorJSON
 
 @click.group()
 def main():
@@ -37,7 +37,9 @@ def export(start_date, end_date, format, file, coin):
     Validations.format_validation(format)
     Validations.file_validation(format, file)
     Validations.coin_validation(coin)
-    click.echo(f"TO jest opcja INC dla dat {start_date.strftime('%Y-%m-%d')} i {end_date.strftime('%Y-%m-%d')} oraz formatu {format} i pliku {file}")
+    export = ExportToCSVorJSON(str(start_date)[:10], str(end_date)[:10], format, file, coin)
+    export.export_to_file()
+
 
 if __name__ == '__main__':
     main()
