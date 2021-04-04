@@ -2,7 +2,7 @@
 
 ---
 
-###General info
+### General info
 
 The written script processes downloaded historical data from an external cryptocurrency API (bitcoin by default), which are made available
 at [api.coinpaprika.com](https://api.coinpaprika.com/). 
