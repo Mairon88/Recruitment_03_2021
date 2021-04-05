@@ -13,6 +13,13 @@ Based on the downloaded information, the script allows you to perform such opera
 
 The API returns data over a maximum period of one year.
 
+After cloning the project on your computer and entering the project folder in the terminal, please enter the command:
+
+    $ pip install -r requirements.txt 
+
+to install all the necessary libraries for the script to run properly.
+
+
 To run a script, open a command line window in the folder with the script.py file
 The above operations are performed in accordance with the commands described below.
 
