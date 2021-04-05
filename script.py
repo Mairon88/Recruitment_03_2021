@@ -6,7 +6,6 @@ from classes import Validations, AvgPrice, ConsecutiveIncrease, ExportToCSVorJSO
 def main():
     pass
 
-
 @main.command()
 @click.option('--start-date', required=True, type=click.DateTime(formats=["%Y-%m"]))
 @click.option('--end-date', required=True, type=click.DateTime(formats=["%Y-%m"]))
@@ -36,7 +35,7 @@ def consecutive_increase(start_date, end_date, coin):
 @main.command()
 @click.option('--start-date', required=True, type=click.DateTime(formats=["%Y-%m-%d"]))
 @click.option('--end-date', required=True, type=click.DateTime(formats=["%Y-%m-%d"]))
-@click.option('--format', required=True)  # csv, json
+@click.option('--format', required=True)
 @click.option('--file', required=True)
 @click.option('--coin', required=False, default='btc-bitcoin')
 def export(start_date, end_date, format, file, coin):

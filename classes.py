@@ -20,7 +20,7 @@ class Validations(object):
             else:
                 assert start_date.strftime('%Y-%m') <= end_date.strftime('%Y-%m')
         except AssertionError:
-            click.secho(f"Data początkowa powinna być równa lub wcześniejsza od końcowej", fg='red')
+            click.secho(f"Start date should be equal or earlier than the end date", fg='red')
             sys.exit()
 
         try:
@@ -31,7 +31,7 @@ class Validations(object):
                 today = datetime.date.today().strftime('%Y-%m')
                 assert start_date.strftime('%Y-%m') <= today and end_date.strftime('%Y-%m') <= today
         except AssertionError:
-            click.secho(f"Data początkowa i końcowa nie powinny być późniejsze od dzisiejszej daty", fg='red')
+            click.secho(f"Start and end dates should not be later than today's date", fg='red')
             sys.exit()
 
     @staticmethod
@@ -39,7 +39,7 @@ class Validations(object):
         try:
             assert formats == 'csv' or formats == 'json'
         except AssertionError:
-            click.secho(f"błędny format, proszę wpisać 'csv' lub 'json", fg='red')
+            click.secho(f"Wrong format, please enter 'csv' or 'json", fg='red')
             sys.exit()
 
     @staticmethod
@@ -47,14 +47,15 @@ class Validations(object):
         try:
             assert file.endswith(f'.{formats}')
         except AssertionError:
-            click.secho(f"błędny format pliku do zapisu", fg='red')
+            click.secho(f"Wrong file format for writing", fg='red')
             sys.exit()
         try:
             chars = ['#', '%', '&', '*', ':', '?', '/', '|', '\\']
             for char in chars:
                 assert char not in file
         except AssertionError:
-            click.secho(f"Podana nazwa zawiera niedozwolony znak/i z podanych w liście: '#','%','&','*',':','?','/','|'"
+            click.secho(f"The given name contains an illegal character from those given in the list:"
+                        f" '#','%','&','*',':','?','/','|'"
                         f",'\\'", fg='red')
             sys.exit()
 
@@ -74,45 +75,38 @@ class Validations(object):
 
             assert coin in pickle_coins
         except Exception:
-            click.echo(click.style(f"Błąd podczas próby połączenia się z API lub błędna nazwa kryptowaluty", fg='red'))
+            click.echo(click.style(f"Error while trying to connect to API or wrong cryptocurrency name", fg='red'))
             sys.exit()
 
 
 # ==============================DATA, AVERAGE, INCREASE, EXPORT =================================
+
+# The class responsible for calculating the monthly average values of the cryptocurrency
 class AvgPrice(object):
     def __init__(self, start_point, end_point, coin):
         self.start_point = start_point
         self.end_point = end_point
         self.coin = coin
 
+    # A method that gets data to be processed through an object of GetHistoricalOHLC class
+    # and checking if the entered parameters are the same as those previously specified
     def get_data_to_calculate(self):
         get_data = GetHistoricalOHLC(str(self.start_point), str(self.end_point), self.coin, 'avg')
         get_data.check_params()
+        return get_data.prepare_data()
 
-    def prepare_data(self):
-        self.get_data_to_calculate()
-
-        try:
-            with open(f'caching_mechanism/caching_mechanism_data_avg', 'rb') as file:
-                data = pickle.load(file)
-
-            data_dict = {}
-            n = 1
-            for i in data:
-                data_dict.setdefault(n, i)
-                n += 1
-            return data_dict
-        except:
-            click.echo(click.style(("Brak pliku o podanej nazwie"), fg='red'))
-            sys.exit()
-
-
+    # The method calculating the average value of the currency for a given month
     def avg_per_month(self):
-        def shorten_data(data):
-            short_data = data[:7]
-            return short_data
-        prepared_data = self.prepare_data()
 
+        # The function shortens the received date from the API to a year and a month
+        def shorten_data(date):
+            short_date = date[:7]
+            return short_date
+
+        # Assignment of data retrieved from api in the form of a dictionary to a variable
+        prepared_data = self.get_data_to_calculate()
+
+        # Use of pandas to improve calculation of mean values and display of results
         df = pd.DataFrame.from_dict(prepared_data, orient='index', columns=['time_close', 'close'])
         df['time_close'] = df['time_close'].apply(shorten_data)
         groups = df.groupby(by='time_close')
@@ -123,12 +117,6 @@ class AvgPrice(object):
             price_list.append(round(float(df.where(avg_for_this_month).dropna(how='all').mean()), 2))
         new_df = pd.DataFrame({'Date': month_list, 'Average price ($)': price_list})
         click.echo(click.style((new_df.to_string(index=False)), fg='green'))
-        today = datetime.date.today()
-        days_in_month = monthrange(int(self.end_point[:4]), int(self.end_point[5:8]))[1]
-        # if str(self.end_point)+f"-{days_in_month}" > str(today)[:10] and :
-        #     click.echo(click.style(("W związku z tym, że aktualny miesiąc jeszcze się nie skończył to wartość średnia "
-        #                            "ostatniego miesiąca liczona jest "
-        #                             "od początku miesiąca do aktualnego dnia i godziny"), fg='yellow'))
 
 
 class ConsecutiveIncrease(object):
@@ -140,46 +128,46 @@ class ConsecutiveIncrease(object):
     def get_data_to_calculate(self):
         get_data = GetHistoricalOHLC(self.start_point, self.end_point, self.coin, 'inc')
         get_data.check_params()
-
-    def prepare_data(self):
-        self.get_data_to_calculate()
-
-        with open(f'caching_mechanism/caching_mechanism_data_inc', 'rb') as file:
-            data = pickle.load(file)
-
-        data_dict = {}
-        n = 1
-        for i in data:
-            data_dict.setdefault(n, i)
-            n += 1
-        return data_dict
+        return get_data.prepare_data()
 
     def longest_increase(self):
         def shorten_data(data):
             short_data = data[:10]
             return short_data
 
-        prepared_data = self.prepare_data()
+        prepared_data = self.get_data_to_calculate()
         pairs_date_price = []
         temporary_data = []
 
         df = pd.DataFrame.from_dict(prepared_data, orient='index', columns=['time_close', 'close'])
         df['time_close'] = df['time_close'].apply(shorten_data)
 
+        # row[0] - dates, row[1] - price
         for index, row in df.iterrows():
+
             if temporary_data:
+                # If the value is greater than the last of the temporary data, it will add it to the temporary data
                 if row[1] > temporary_data[-1][1]:
                     temporary_data.append((row[0], row[1]))
+
                 else:
+                    # If the value is less than or equal to the last of the provisional data, the
+                    # worklist length and the correct one are checked.
                     if len(pairs_date_price) < len(temporary_data):
+                        # If the correct list is shorter than the working list, its contents will be
+                        # copied to the correct list and the working list will be cleared and completed with
+                        # the new value
                         pairs_date_price = temporary_data.copy()
                         temporary_data.clear()
                         temporary_data.append((row[0], row[1]))
 
                     else:
+                        # If the length of the valid list is greater than the working list, it does not copy the
+                        # contents of the working list to the correct one
                         temporary_data.clear()
                         temporary_data.append((row[0], row[1]))
 
+            # If the working list is mouth, it adds the first value
             else:
                 temporary_data.append((row[0], row[1]))
 
@@ -199,28 +187,14 @@ class ExportToCSVorJSON(object):
     def get_data_to_calculate(self):
         get_data = GetHistoricalOHLC(self.start_point, self.end_point, self.coin, 'exp')
         get_data.check_params()
-
-    def prepare_data(self):
-        self.get_data_to_calculate()
-
-        with open(f'caching_mechanism/caching_mechanism_data_exp', 'rb') as file:
-            data = pickle.load(file)
-
-        data_dict = {}
-        n = 1
-        for i in data:
-            data_dict.setdefault(n, i)
-            n += 1
-
-        return data_dict
+        return get_data.prepare_data()
 
     def export_to_file(self):
         def shorten_data(data):
             short_data = data[:10]
             return short_data
 
-
-        prepared_data = self.prepare_data()
+        prepared_data = self.get_data_to_calculate()
         df = pd.DataFrame.from_dict(prepared_data, orient='index', columns=['time_close', 'close'])
         df['time_close'] = df['time_close'].apply(shorten_data)
         df['close'] = df['close'].round(2)
@@ -229,17 +203,19 @@ class ExportToCSVorJSON(object):
             df.to_json(self.file, orient='records')
         elif self.formats == 'csv':
             df.to_csv(self.file, sep=',', index=False)
-        click.echo(click.style(f'Zapisano dane do pliku: {self.file}', fg='green'))
+        click.echo(click.style(f'Data has been written to a file: {self.file}', fg='blue'))
 
 
 class GetHistoricalOHLC(object):
     def __init__(self, start_point, end_point, coin, option):
         self.option = option
+        # Adding to the short starting date of the first day of the month
         if len(start_point) == 7:
             self.start_point = start_point+"-01"
         elif len(start_point) == 10:
             self.start_point = start_point
 
+        # Adding to the short end date of the last day of the month
         if len(end_point) == 7:
             today = datetime.date.today()
             if end_point[5:7] == str(today)[5:7]:
@@ -251,59 +227,67 @@ class GetHistoricalOHLC(object):
             self.end_point = end_point
         self.coin = coin
 
-    # POBIERANIE DANYCH Z API
     def get_data_from_api(self):
         try:
             url = f"https://api.coinpaprika.com/v1/coins/{self.coin}/ohlcv/" \
                   f"historical?start={self.start_point}&end={self.end_point}"
             res = requests.get(url)
             data = res.json()
-            print("DATA Z API")
 
         except Exception:
-            click.echo(click.style(f"Błąd podczas próby połączenia się z API", fg='red'))
+            click.echo(click.style(f"Error while trying to connect to the API", fg='red'))
             sys.exit()
-
 
         self.caching_mechanism(data)
         self.save_params()
         return data
 
-    # ZAPIS PARAMETROW DO PLIKU
+    # Saving parameters to a file
     def save_params(self):
         with open(f'caching_mechanism/caching_mechanism_param_{self.option}', 'wb') as file:
             data = [self.start_point, self.end_point, self.coin]
             pickle.dump(data, file)
-            # file.write(self.start_point+"\n")
-            # file.write(self.end_point + "\n")
-            # file.write(self.coin)
 
-    # METODA SPRAWDZAJACA CZY PARAMETRY POKRYWAJA SIE Z POPRZEDNIM POBRANIEM DANYCH
+    # The method checks if the parameters match the previous data download
     def check_params(self):
 
-        if os.path.isfile(f'caching_mechanism/caching_mechanism_param_{self.option}') and os.path.isfile(f'caching_mechanism/caching_mechanism_data_{self.option}'):
+        if os.path.isfile(f'caching_mechanism/caching_mechanism_param_{self.option}') and \
+                os.path.isfile(f'caching_mechanism/caching_mechanism_data_{self.option}'):
             with open(f'caching_mechanism/caching_mechanism_param_{self.option}', 'rb') as file:
                 data = pickle.load(file)
                 param_line_1 = data[0]
                 param_line_2 = data[1]
                 param_line_3 = data[2]
 
-                # JESLI PODANE PARAMETRY POKRYWAJA SIE Z POPRZEDNIMI ZAPISANYMI W PLIKU TO DANE BEDA POBRANE Z PLIKU
+            # IF THE GIVEN PARAMETERS COVER THE PREVIOUS STORES IN THE FILE, THE DATA WILL BE DOWNLOADED FROM THE FILE
                 if not (param_line_1 == self.start_point and param_line_2 == self.end_point and
                         param_line_3 == self.coin):
                     self.get_data_from_api()
-                    print("Zapisujemy nowe parametry i odpalamy api")
 
-                # W INNYM PRZYPADKU ZOSTANA ZAPISANE NOWE PARAMETRY A DANE ZOSTANA POBRANE Z API
-                else:
-                    print("Powtórzone parametry, mozna zczytywac z pliku dane")
+            # OTHERWISE, NEW PARAMETERS WILL BE SAVED AND THE DATA WILL BE DOWNLOADED FROM API
 
-        # JESLI BEDZIE BRAK ZAPISANYCH PARAMETROW LUB PLIKU  Z DANYMI TO ZOSTANA ZAPISANE NOWE PARAMETRY A DANE
-        # ZOSTANA POBRANE Z API
+        # IF THERE IS NO SAVED PARAMETERS OR DATA FILE, NEW PARAMETERS WILL BE SAVED AND DATA DOWNLOADED FROM API
         else:
             self.get_data_from_api()
 
-    # KONWERTOWANIE DANYCH DO CSV I ZAPIS DO PLIKU W CELU  LEPSZEJ OBROBKI W PANDASIE
+    # Reading data from a file and converting it into a dictionary for pandas
+    def prepare_data(self):
+        try:
+            with open(f'caching_mechanism/caching_mechanism_data_{self.option}', 'rb') as file:
+                data = pickle.load(file)
+
+            data_dict = {}
+            n = 1
+            for i in data:
+                data_dict.setdefault(n, i)
+                n += 1
+            return data_dict
+
+        except Exception:
+            click.echo(click.style("There is no file with the given name"), fg='red')
+            sys.exit()
+
+    # Writing data to a file for reuse with repeated parameters
     def caching_mechanism(self, data):
         if not os.path.exists('caching_mechanism'):
             os.makedirs('caching_mechanism')
@@ -312,4 +296,4 @@ class GetHistoricalOHLC(object):
             with open(f'caching_mechanism/caching_mechanism_data_{self.option}', 'wb') as file:
                 pickle.dump(data, file)
         except IOError:
-            print("Coś nie tak z konwertowaniem")
+            click.echo(click.style(f"Error while creates caching mechanism", fg='red'))

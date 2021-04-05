@@ -34,7 +34,7 @@ def test_format_is_not_json_or_csv():
     result = runner.invoke(main, ['export', '--start-date=2020-01-01', '--end-date=2020-05-01', '--format=bin',
                                   '--file=test_file.csv'])
     assert result.exit_code == 0
-    assert result.output == "błędny format, proszę wpisać 'csv' lub 'json\n"
+    assert result.output == "Wrong format, please enter 'csv' or 'json\n"
 
 
 def test_format_date():
@@ -55,11 +55,11 @@ def test_start_data_is_before_or_equal_end_data():
     result3 = runner.invoke(main, ['export', '--start-date=2020-06-01', '--end-date=2020-05-01', '--format=csv',
                                    '--file=myfile.csv'])
     assert result1.exit_code == 0
-    assert result1.output == "Data początkowa powinna być równa lub wcześniejsza od końcowej\n"
+    assert result1.output == "Start date should be equal or earlier than the end date\n"
     assert result2.exit_code == 0
-    assert result2.output == "Data początkowa powinna być równa lub wcześniejsza od końcowej\n"
+    assert result2.output == "Start date should be equal or earlier than the end date\n"
     assert result3.exit_code == 0
-    assert result3.output == "Data początkowa powinna być równa lub wcześniejsza od końcowej\n"
+    assert result3.output == "Start date should be equal or earlier than the end date\n"
 
 
 def test_file_name_and_format():
@@ -67,15 +67,8 @@ def test_file_name_and_format():
     result = runner.invoke(main, ['export', '--start-date=2020-01-01', '--end-date=2020-05-01', '--format=csv',
                                   '--file=myfi/le.csv'])
     assert result.exit_code == 0
-    assert result.output == "Podana nazwa zawiera niedozwolony znak/i z podanych w liście: " \
+    assert result.output == "The given name contains an illegal character from those given in the list: " \
                             "'#','%','&','*',':','?','/','|','\\'\n"
-
-
-# def test_is_coin_exist():
-#     runner = CliRunner()
-#     result = runner.invoke(main, ['average-price-by-month', '--start-date=2020-01', '--end-date=2020-05',
-#                                   '--coin=tazosjkjy'])
-#     assert result.exit_code == 0
 
 
 def test_avg_price_initialization():
