@@ -18,7 +18,10 @@ After cloning the project on your computer and entering the project folder in th
 
     $ pip install -r requirements.txt 
 
-to install all the necessary libraries for the script to run properly.
+to install all the necessary libraries for the script to run properly
+or activate a virtual environment:
+
+    $ source venv/bin/activate
 
 
 To run a script, open a command line window in the folder with the script.py file
